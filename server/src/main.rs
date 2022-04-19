@@ -4,6 +4,10 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
 use std::sync::mpsc;
+use aes::Aes128;
+use aes::cipher::{
+    BlockCipher, BlockEncrypt, BlockDecrypt, KeyInit, generic_array::GenericArray
+};
 
 
 fn handle_connection(mut stream: TcpStream, tx: std::sync::mpsc::Sender<(std::string::String, std::net::TcpStream)>) {
@@ -11,7 +15,6 @@ fn handle_connection(mut stream: TcpStream, tx: std::sync::mpsc::Sender<(std::st
     loop
     {
         let mut buffer = [0; 1024];
-        // println!("before read");
         match stream.read(&mut buffer) {
             Ok(_) => {
                 let msg = String::from_utf8_lossy(&buffer).to_string();
