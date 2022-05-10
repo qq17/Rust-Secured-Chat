@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=C:\Users\Master\Documents\rust\rust-test-task\client\target\debug\build\typenum-fea67991002c1f38\out\consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=C:\Users\Master\Documents\rust\rust-test-task\client\target\debug\build\typenum-fea67991002c1f38\out\op.rs

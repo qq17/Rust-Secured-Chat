@@ -4,23 +4,35 @@ use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
 use std::sync::mpsc;
-use aes::Aes128;
-use aes::cipher::{
-    BlockCipher, BlockEncrypt, BlockDecrypt, KeyInit, generic_array::GenericArray
-};
 
+extern crate postgres;
 
-fn handle_connection(mut stream: TcpStream, tx: std::sync::mpsc::Sender<(std::string::String, std::net::TcpStream)>) {
+use postgres::{Client, NoTls, Error};
+
+const DATABASE: &str = "postgresql://postgres:123@localhost/test";
+
+fn handle_connection(mut stream: TcpStream, tx: std::sync::mpsc::Sender<([u8;1024], std::net::TcpStream)>) {
     println!("---");
     loop
     {
         let mut buffer = [0; 1024];
+
         match stream.read(&mut buffer) {
             Ok(_) => {
                 let msg = String::from_utf8_lossy(&buffer).to_string();
                 println!("{}: {}", stream.peer_addr().unwrap(), msg);
+
+                // send to other clients
+                tx.send((buffer, stream.try_clone().unwrap())).unwrap();
+
+                let mut sqlclient = Client::connect(DATABASE, NoTls).unwrap();
+                
+                // insert into db
+                sqlclient.execute(
+                    "INSERT INTO chatmessage (ip, msg) VALUES ($1, $2)",
+                    &[&stream.peer_addr().unwrap().to_string(), &(&buffer as &[u8])],
+                ).unwrap();
                 println!("+++");
-                tx.send((msg, stream.try_clone().unwrap())).unwrap();
             },
             Err(e) => {
                 if e.kind() != io::ErrorKind::WouldBlock {
@@ -28,23 +40,35 @@ fn handle_connection(mut stream: TcpStream, tx: std::sync::mpsc::Sender<(std::st
                 }
             }
         }
-        
         stream.flush().unwrap();
     }
-    
 }
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     listener.set_nonblocking(true).unwrap();
 
+    // vector of all connected clients
     let mut clients: Vec<TcpStream> = Vec::new();
-    let (tx, rx) = mpsc::channel::<(String, TcpStream)>();
+
+    let (tx, rx) = mpsc::channel::<([u8;1024], TcpStream)>();
+
+    let mut sqlclient = Client::connect(DATABASE, NoTls).unwrap();
+
+    sqlclient.batch_execute("
+        DROP TABLE IF EXISTS chatmessage;
+        CREATE TABLE IF NOT EXISTS chatmessage (
+            id              SERIAL PRIMARY KEY,
+            ip              VARCHAR NOT NULL,
+            msg             BYTEA NOT NULL
+            )
+    ").unwrap();
 
     loop {
         if let Ok((stream, addr)) = listener.accept() {
             println!("connected {}", stream.peer_addr().unwrap());
-
+            
+            //add new client to pool
             clients.push(stream.try_clone().unwrap());
             let tx = tx.clone();
 
@@ -55,14 +79,16 @@ fn main() {
         
 
         match rx.try_recv() {
-            Ok((msg, sender_stream)) => {
-                let clients_to_send_msg = (&clients).into_iter().filter(|c| c.peer_addr().unwrap() != sender_stream.peer_addr().unwrap()).collect::<Vec<_>>();
+            Ok((buffer, sender_stream)) => {
+                // find clients that are different from the sender and send to them
+                let clients_to_send_msg = (&clients).into_iter()
+                                                    .filter(|c| c.peer_addr().unwrap() != sender_stream.peer_addr().unwrap())
+                                                    .collect::<Vec<_>>();
                 for mut c in clients_to_send_msg.into_iter() {
-                    let mut buff = msg.clone().into_bytes();
-                    c.write(&buff).unwrap();
+                    c.write(&buffer).unwrap();
                 }
             },
-            Err(e) => {}
+            Err(_) => {}
         }
     }
 }

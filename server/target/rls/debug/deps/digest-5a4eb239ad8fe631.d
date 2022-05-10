@@ -1,0 +1,12 @@
+c:\Users\Master\Documents\rust\rust-test-task\server\target\rls\debug\deps\digest-5a4eb239ad8fe631.rmeta: C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\lib.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\ct_variable.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\rt_variable.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\wrapper.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\xof_reader.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\digest.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\mac.rs
+
+c:\Users\Master\Documents\rust\rust-test-task\server\target\rls\debug\deps\digest-5a4eb239ad8fe631.d: C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\lib.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\ct_variable.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\rt_variable.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\wrapper.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\xof_reader.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\digest.rs C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\mac.rs
+
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\lib.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\ct_variable.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\rt_variable.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\wrapper.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\core_api\xof_reader.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\digest.rs:
+C:\Users\Master\.cargo\registry\src\github.com-1ecc6299db9ec823\digest-0.10.3\src\mac.rs:

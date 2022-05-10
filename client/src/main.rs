@@ -5,19 +5,65 @@ use std::sync::mpsc;
 use std::thread;
 use aes::Aes128;
 use aes::cipher::{
-    BlockCipher, BlockEncrypt, BlockDecrypt, KeyInit, generic_array::GenericArray
+    BlockEncrypt, BlockDecrypt, KeyInit, generic_array::GenericArray
 };
 
+extern crate postgres;
 
-fn handle_connection(mut stream: &mut TcpStream, rx: std::sync::mpsc::Receiver<std::string::String>) {
-    let key = GenericArray::from([0u8; 16]);
-    let cipher = Aes128::new(&key);
+use postgres::{Client, NoTls, Error};
 
+const DATABASE: &str = "postgresql://postgres:123@localhost/test";
+
+
+// structure to read from database
+struct ChatMessage {
+    _id: i32,
+    ip: String,
+    msg: Option<Vec<u8>>
+}
+
+fn encrypt_msg(buffer: Vec<u8>, cipher: &Aes128) -> Vec<u8> {
+    let blocks: Vec<_> = buffer.chunks(16).collect();
+
+    let mut enc_buffer = Vec::<[u8;16]>::new();
+
+    for b in blocks {
+        let b: [u8;16] = b.try_into().unwrap();
+        let mut enc = GenericArray::from(b);
+        cipher.encrypt_block(&mut enc);
+        let enc: [u8;16] = enc.try_into().unwrap();
+        enc_buffer.push(enc);
+    }
+
+    enc_buffer.concat()
+}
+
+fn decrypt_msg(buffer: Vec<u8>, cipher: &Aes128) -> Vec<u8> {
+    let blocks: Vec<_> = buffer.chunks(16).collect();
+
+    let mut dec_buffer = Vec::<[u8;16]>::new();
+
+    for b in blocks {
+        let b: [u8;16] = b.try_into().unwrap();
+        let mut dec = GenericArray::from(b);
+        cipher.decrypt_block(&mut dec);
+        let dec: [u8;16] = dec.try_into().unwrap();
+        dec_buffer.push(dec);
+    }
+
+    dec_buffer.concat()
+}
+
+fn handle_connection(stream: &mut TcpStream, rx: std::sync::mpsc::Receiver<std::string::String>, cipher:Aes128) {
     loop {
         let mut buffer = [0; 1024];
         match stream.read(&mut buffer) {
             Ok(_) => {
-                let msg = String::from_utf8_lossy(&buffer).to_string();
+                // decrypt read buffer
+                let dec_buffer = decrypt_msg(Vec::from(buffer), &cipher);
+                assert_eq!(Vec::from(buffer), encrypt_msg(dec_buffer.clone(), &cipher));
+
+                let msg = String::from_utf8_lossy(&dec_buffer).to_string();
                 println!("{}", msg);
             },
             Err(e) => {
@@ -29,22 +75,17 @@ fn handle_connection(mut stream: &mut TcpStream, rx: std::sync::mpsc::Receiver<s
 
         match rx.try_recv() {
             Ok(msg) => {
-                let mut buff = msg.clone().into_bytes();
-                let mut buff: Vec<_> = buff.chunks(16).collect();
-                
-                //Doesnt work
+                // encrypt msg to send
+                let buffer = msg.clone().into_bytes();
+                let mut blocks = [0u8; 1024];
+                blocks[..buffer.len()].clone_from_slice(&buffer);
 
-                // let mut blocks = GenericArray::from_iter(buff);
-                let a:[[u8;16];64] = buff.into_iter().collect().try_into().unwrap();
-                let mut blocks = GenericArray::from(a);
+                let enc_buffer = encrypt_msg(Vec::from(blocks), &cipher);
+                assert_eq!(Vec::from(blocks), decrypt_msg(enc_buffer.clone(), &cipher));
 
-                cipher.encrypt_blocks(&mut blocks);
-                let mut buf: Vec<u8> = blocks.concat();
-                let mut msg = String::from_utf8_lossy(&buf).to_string();
-
-                stream.write(&buff).unwrap();
+                stream.write(&enc_buffer).unwrap();
             },
-            Err(e) => {}
+            Err(_) => {}
         }
     }
 }
@@ -56,23 +97,45 @@ fn main() {
 
     let (tx, rx) = mpsc::channel::<String>();
 
+    let key = GenericArray::from([0u8; 16]);
+    let cipher = Aes128::new(&key);
+    
     thread::spawn(move || {
-        handle_connection(&mut stream, rx);
+        handle_connection(&mut stream, rx, Aes128::new(&key));
     });
 
-    println!("type 'send ...' to send message");
+    println!("type 'send ...' to send message\ntype 'history' to see chat history");
     loop {
+        // read command
         let mut cmd = String::new();
-        let mut msg = String::new();
         io::stdin()
             .read_line(&mut cmd)
             .expect("Fail");
+
         if cmd.starts_with("send ") {
-            msg = String::from(&cmd[5..cmd.chars().count()]);
+            let msg = String::from(&cmd[5..cmd.chars().count()]);
             tx.send(msg).unwrap();
         }
         else {
-            println!("wrong command");
+            if cmd == String::from("history\r\n") {
+                //get messages from database
+                let mut sqlclient = Client::connect(DATABASE, NoTls).unwrap();
+                for row in sqlclient.query("SELECT id, ip, msg FROM chatmessage", &[]).unwrap() {
+                    let chatmessage = ChatMessage {
+                        _id: row.get(0),
+                        ip: row.get(1),
+                        msg: row.get(2),
+                    };
+
+                    println!("id={} ip={}: {}",
+                            chatmessage._id,
+                            chatmessage.ip,
+                            String::from_utf8_lossy(&decrypt_msg(chatmessage.msg.unwrap(), &cipher)).to_string());
+                }
+            }
+            else {
+                println!("wrong command");
+            }
         }
     }
 }
